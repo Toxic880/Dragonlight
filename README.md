@@ -16,16 +16,19 @@ Run `/reload` or restart the world. Works on existing worlds.
 
 ## What it changes
 
-Only drop when mined in the End:
+You can't craft these, and the ones that generate in mineshafts, villages, strongholds, igloos,
+mansions, outposts, ancient cities and trial chambers won't drop when you mine them:
+
 torch, soul torch, copper torch, lantern, soul lantern, copper lantern.
 
-No recipe and no drops at all:
-candles, candle cakes, campfires, soul campfires.
+Torches you place yourself drop normally, so you can pick them back up and move them around.
+The exception is if you place one inside one of those structures.
 
-These are also taken out of chest loot, trail ruins brushing, and villager trades.
+Gone completely, no recipe and no drops: candles, candle cakes, campfires, soul campfires.
 
-Torches you place outside the End do not drop when you break them. Redstone torches and other
-light sources are untouched.
+All of the above is also taken out of chest loot, trail ruins brushing, and villager trades.
+
+Redstone torches and other light sources are untouched.
 
 ## Supported versions
 
@@ -38,9 +41,7 @@ Use the closest version at or below yours.
 
 Optional. Install next to the main pack, same version.
 
-- `redstone-torch-lock`: locks redstone torches too.
-- `lenient-recovery`: lets you pick your own torches back up, except inside structures that
-  generate torches. Needs 1.19 or newer.
+- `redstone-torch-lock`: locks redstone torches the same way.
 
 ## Building
 

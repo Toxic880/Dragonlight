@@ -47,13 +47,16 @@ REMOVED = (
 
 LOCKED = GATED + REMOVED
 
-# Structures that generate torches, for the lenient add-on.
+# Structures that generate torches. Torches inside these never drop.
 TORCH_STRUCTURES = [
-    "minecraft:mineshaft", "minecraft:mineshaft_mesa", "minecraft:stronghold",
-    "minecraft:igloo", "minecraft:mansion", "minecraft:pillager_outpost",
-    "minecraft:ancient_city", "minecraft:trial_chambers", "minecraft:village_desert",
-    "minecraft:village_plains", "minecraft:village_savanna", "minecraft:village_snowy",
-    "minecraft:village_taiga",
+    "mineshaft", "mineshaft_mesa", "stronghold", "igloo", "mansion",
+    "pillager_outpost", "ancient_city", "trial_chambers", "village_desert",
+    "village_plains", "village_savanna", "village_snowy", "village_taiga",
+]
+
+# Names used before 1.18.2, when the predicate took a structure feature id.
+LEGACY_TORCH_STRUCTURES = [
+    "mineshaft", "village", "stronghold", "igloo", "mansion", "pillager_outpost",
 ]
 
 DV_1_19 = 3105       # location predicate gained "structure"
@@ -63,6 +66,45 @@ IN_THE_END = {
     "condition": "minecraft:location_check",
     "predicate": {"dimension": "minecraft:the_end"},
 }
+
+
+def structure_field(vanilla, lay, data_version):
+    """Return the predicate field for structures, and whether ids are namespaced."""
+    field = "structures" if data_version >= DV_1_20_5 else (
+        "structure" if data_version >= DV_1_19 else "feature")
+    namespaced = True
+    for src in (vanilla / "data" / "minecraft" / lay["advancement"]).rglob("*.json"):
+        text = src.read_text()
+        marker = f'"{field}": "'
+        if marker in text:
+            namespaced = ":" in text.split(marker, 1)[1].split('"', 1)[0]
+            break
+    return field, namespaced
+
+
+def can_drop(vanilla, lay, data_version):
+    """Drop unless the block sits inside a structure that generates torches."""
+    field, namespaced = structure_field(vanilla, lay, data_version)
+    mcv = vanilla / "data" / "minecraft"
+    if namespaced:
+        for folder in ("structure", "configured_structure_feature"):
+            available = {p.stem for p in (mcv / "worldgen" / folder).glob("*.json")}
+            if available:
+                break
+        names = [f"minecraft:{n}" for n in TORCH_STRUCTURES if n in available]
+    else:
+        names = list(LEGACY_TORCH_STRUCTURES)
+
+    if field == "structures":
+        inside = {"condition": "minecraft:location_check", "predicate": {"structures": names}}
+    else:
+        terms = [{"condition": "minecraft:location_check", "predicate": {field: n}}
+                 for n in names]
+        inside = {"condition": "minecraft:any_of", "terms": terms}
+    return {
+        "condition": "minecraft:any_of",
+        "terms": [deepcopy(IN_THE_END), {"condition": "minecraft:inverted", "term": inside}],
+    }
 
 
 # --- downloads ---
@@ -153,12 +195,12 @@ def strip_items(node, wanted):
     return changed
 
 
-def gate_to_the_end(table, wanted):
-    """Add the 'only in the End' condition to any pool that yields a gated item."""
+def gate(table, wanted, condition):
+    """Add a drop condition to any pool that yields a gated item."""
     changed = False
     for pool in table.get("pools", []):
         if find_items(pool, wanted):
-            pool.setdefault("conditions", []).append(deepcopy(IN_THE_END))
+            pool.setdefault("conditions", []).append(deepcopy(condition))
             changed = True
     return changed
 
@@ -244,6 +286,7 @@ def build(version):
     for extra in sorted((mcv / "datapacks").glob("*/data/minecraft/" + lay["loot"])):
         loot_roots.append(extra)  # built-in feature packs
 
+    drop_rule = can_drop(vanilla, lay, data_version)
     seen = set()
     for root in loot_roots:
         if not root.is_dir():
@@ -257,7 +300,7 @@ def build(version):
             is_block_table = rel.parts[0] in ("blocks", "block")
             if is_block_table and find_items(table, gated):
                 # Torch blocks keep their drop, gated to the End.
-                if gate_to_the_end(table, gated):
+                if gate(table, gated, drop_rule):
                     strip_items(table, removed)
                     write_json(mc / lay["loot"] / rel, table)
                     report["gated"].append(str(rel))
@@ -411,6 +454,7 @@ def build_addons(version, fmt, data_version, lay, vanilla):
     """Build the opt-in add-on packs."""
     made = []
     mcv = vanilla / "data" / "minecraft"
+    drop_rule = can_drop(vanilla, lay, data_version)
 
     # redstone torches
     red = BUILD / version / "redstone-torch-lock"
@@ -419,7 +463,7 @@ def build_addons(version, fmt, data_version, lay, vanilla):
     src = mcv / lay["loot"] / "blocks" / "redstone_torch.json"
     if src.exists():
         table = json.loads(src.read_text())
-        gate_to_the_end(table, {"minecraft:redstone_torch"})
+        gate(table, {"minecraft:redstone_torch"}, drop_rule)
         write_json(red / "data" / "minecraft" / lay["loot"] / "blocks" / "redstone_torch.json", table)
         rsrc = mcv / lay["recipe"] / "redstone_torch.json"
         if rsrc.exists():
@@ -432,41 +476,6 @@ def build_addons(version, fmt, data_version, lay, vanilla):
         }})
         made.append(("redstone-torch-lock", red))
 
-    # recover your own torches outside torch-bearing structures
-    if data_version >= DV_1_19:
-        lenient = BUILD / version / "lenient-recovery"
-        if lenient.exists():
-            shutil.rmtree(lenient)
-        available = {f"minecraft:{p.stem}" for p in (mcv / "worldgen" / "structure").glob("*.json")}
-        structures = [s for s in TORCH_STRUCTURES if s in available]
-        if data_version >= DV_1_20_5:
-            terms = [{"condition": "minecraft:location_check", "predicate": {"structures": structures}}]
-        else:
-            terms = [{"condition": "minecraft:location_check", "predicate": {"structure": s}}
-                     for s in structures]
-        not_in_structure = {
-            "condition": "minecraft:inverted",
-            "term": terms[0] if len(terms) == 1 else {"condition": "minecraft:any_of", "terms": terms},
-        }
-        wrote = False
-        for item in GATED:
-            src = mcv / lay["loot"] / "blocks" / f"{item}.json"
-            if not src.exists():
-                continue
-            table = json.loads(src.read_text())
-            for pool in table.get("pools", []):
-                pool.setdefault("conditions", []).append({
-                    "condition": "minecraft:any_of",
-                    "terms": [deepcopy(IN_THE_END), deepcopy(not_in_structure)],
-                })
-            write_json(lenient / "data" / "minecraft" / lay["loot"] / "blocks" / f"{item}.json", table)
-            wrote = True
-        if wrote:
-            write_json(lenient / "pack.mcmeta", {"pack": {
-                "pack_format": fmt,
-                "description": "Dragonlight add-on - placed torches drop outside torch structures",
-            }})
-            made.append(("lenient-recovery", lenient))
     return made
 
 
