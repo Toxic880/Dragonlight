@@ -16,19 +16,15 @@ Run `/reload` or restart the world. Works on existing worlds.
 
 ## What it changes
 
-You can't craft these, and the ones that generate in mineshafts, villages, strongholds, igloos,
-mansions, outposts, ancient cities and trial chambers won't drop when you mine them:
+Torches, soul torches, copper torches and all three lanterns can't be crafted. The ones already
+sitting in mineshafts, villages, strongholds and other structures don't drop when you mine
+them, and blowing them up doesn't work either.
 
-torch, soul torch, copper torch, lantern, soul lantern, copper lantern.
+Candles and campfires are removed from the game.
 
-Torches you place yourself drop normally, so you can pick them back up and move them around.
-The exception is if you place one inside one of those structures.
+All of it is stripped out of chest loot and villager trades too.
 
-Gone completely, no recipe and no drops: candles, candle cakes, campfires, soul campfires.
-
-All of the above is also taken out of chest loot, trail ruins brushing, and villager trades.
-
-Redstone torches and other light sources are untouched.
+Redstone torches still work.
 
 ## Supported versions
 
