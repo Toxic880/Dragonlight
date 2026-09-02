@@ -5,8 +5,6 @@ Minecraft datapack. You can only get torches by killing the ender dragon.
 The four torches on the exit portal pillar are the only ones in the world. Mine them off the
 pillar. Respawn the dragon with four end crystals to get four more.
 
-Java Edition, no mods, works on servers.
-
 ## Install
 
 Download the zip for your version from `dist/` and put it in your world's datapacks folder.
