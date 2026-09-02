@@ -7,12 +7,29 @@ pillar. Respawn the dragon with four end crystals to get four more.
 
 ## Install
 
-Download the zip for your version from `dist/` and put it in your world's datapacks folder.
+Put the zip in your world's `datapacks` folder, then run `/reload` in game or restart the
+world. You can drag it there in Finder or Explorer, or use the terminal.
 
-- Singleplayer: `.minecraft/saves/<world>/datapacks/`
-- Server: `<world>/datapacks/`
+Mac:
 
-Run `/reload` or restart the world. Works on existing worlds.
+```bash
+cd ~/Library/Application\ Support/minecraft/saves
+mkdir -p "My World/datapacks"
+cp ~/Downloads/Dragonlight-26.2.zip "My World/datapacks/"
+```
+
+Windows (PowerShell):
+
+```powershell
+cd "$env:APPDATA\.minecraft\saves"
+mkdir "My World\datapacks" -Force
+copy "$env:USERPROFILE\Downloads\Dragonlight-26.2.zip" "My World\datapacks\"
+```
+
+Swap `My World` for your world's folder name and the zip for your version. On a server the
+folder is `<server>/world/datapacks/`.
+
+Works on existing worlds.
 
 ## What it changes
 
